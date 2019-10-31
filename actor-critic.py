@@ -41,7 +41,7 @@ class Agent:
         self.num_rollouts = 1000
         self.batch_size = 100
         self.val_weight = .4
-        self.model_entropy = 1e-4
+        self.model_entropy = 1e-3
         self.learning_rate = 1e-3
         self.gamma = .95
         self.optimizer=optimizers.Adam(learning_rate = self.learning_rate)
@@ -104,17 +104,12 @@ class Agent:
     @tf.function
     def _actor_loss(self, advantages, actions, logits):
         weighted_sparse_ce = losses.SparseCategoricalCrossentropy(from_logits=True)
-        # actions = tf.convert_to_tensor(actions, dtype=tf.int32)
-        # logits = tf.convert_to_tensor(logits, dtype=tf.float32)
-        # advantages = tf.convert_to_tensor(advantages, dtype=tf.float32)
         policy_loss = weighted_sparse_ce(actions, logits, sample_weight=advantages)
         entropy_loss = losses.categorical_crossentropy(logits,logits,from_logits=True)
         return policy_loss - self.model_entropy*entropy_loss
 
     @tf.function
     def _critic_loss(self, returns, values):
-        # returns = tf.convert_to_tensor(returns, dtype=tf.float32)
-        # values = tf.convert_to_tensor(values, dtype=tf.float32)
         return self.val_weight*losses.mean_squared_error(returns,values)
 
 
