@@ -12,23 +12,23 @@ action_space = env.action_space.n
 class Model(tf.keras.Model):
     def __init__(self, action_space):
         super().__init__()
-        self.actor_h1 = layers.Dense(128, activation='relu')
-        self.actor_h2 = layers.Dense(64, activation='relu')
+        self.actor_h1 = layers.Dense(128, activation='relu',name='act1')
+        self.actor_h2 = layers.Dense(64, activation='relu',name='act2')
         self.actor_logits = layers.Dense(action_space, activation='softmax', name="actor_logits")
-        self.val_h1 = layers.Dense(128, activation='relu')
-        self.val_h2 = layers.Dense(64, activation='relu')
-        self.val_logit = layers.Dense(1, name='val_logit')
+        self.val_h1 = layers.Dense(128, activation='relu',name='val1')
+        self.val_h2 = layers.Dense(64, activation='relu',name='val2')
+        self.val_logit = layers.Dense(1, activation='softmax',name='val_logit')
 
     def call(self, x):
 
         x = tf.convert_to_tensor(x, dtype=tf.float32)
 
         x_act = self.actor_h1(x)
-        x_act = self.actor_h2(x_act)
+        #x_act = self.actor_h2(x_act)
         x_act = self.actor_logits(x_act)
 
         x_val = self.val_h1(x)
-        x_val = self.val_h2(x)
+        #x_val = self.val_h2(x_val)
         x_val = self.val_logit(x_val)
 
         return x_act, x_val
@@ -38,12 +38,12 @@ class Agent:
 
     def __init__(self, model):
         self.model = model
-        self.num_rollouts = 1000
+        self.num_rollouts = 3500
         self.batch_size = 100
-        self.val_weight = .4
-        self.model_entropy = 1e-4
+        self.val_weight = .5
+        self.model_entropy = 1e-3
         self.learning_rate = 1e-3
-        self.gamma = .95
+        self.gamma = .99
         self.optimizer=optimizers.Adam(learning_rate = self.learning_rate)
 
     def train(self,env):
@@ -55,7 +55,7 @@ class Agent:
             rollout_score = 0
             done = False
             render = False
-            if rollout % 100 == 0:
+            if rollout % 3499 == 0 and rollout != 0:
                 render = True
             while not done:
                 observation = obs.copy()
@@ -91,6 +91,21 @@ class Agent:
 
             print(f"Episode  {rollout}:  Score  {np.mean(rollout_scores[-100:])}")
 
+    def test(self, env):
+        sample = np.array([1.0,2.0,3.0,4.0,5.0,6.0])
+        sample = np.reshape(sample, (1,-1))
+        self.model(sample)
+        self.model.load_weights('saved/a2c_weights.h5')
+        obs, done, ep_reward = env.reset(), False, 0
+        while not done:
+            action, _ = self.model.predict(obs[None, :])
+            action = tf.squeeze(tf.random.categorical(action, 1), axis=-1)
+            action = np.squeeze(action, axis=-1)
+            obs, reward, done, _ = env.step(action)
+            ep_reward += reward
+            env.render()
+        return ep_reward
+
     
     def _discount_rewards(self, rewards, values):
         returns = np.zeros_like(rewards)
@@ -120,4 +135,6 @@ class Agent:
 
 model = Model(env.action_space.n)
 agent = Agent(model)
-agent.train(env)
+#agent.train(env)
+#model.save_weights('saved/a2c_weights.h5')
+agent.test(env)
