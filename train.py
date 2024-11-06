@@ -3,7 +3,9 @@ import tensorflow.keras.layers as layers
 import tensorflow.keras.losses as losses
 import tensorflow.keras.optimizers as optimizers
 import numpy as np
-import gym
+import gymnasium as gym
+
+from tensorflow.keras.losses import MeanSquaredError
 
 env = gym.make('Acrobot-v1')
 action_space = env.action_space.n
@@ -48,7 +50,7 @@ class Agent:
     def train(self,env):
         rollout_scores = []
         for rollout in range(self.num_rollouts):
-            obs = env.reset().reshape((1,-1))
+            obs = env.reset()[0].reshape((1,-1))
             observations = []
             rollout_history = []
             rollout_score = 0
@@ -58,9 +60,11 @@ class Agent:
                 observations.append(observation)
                 act_logits, val_logits = self.model.predict(obs)
                 action = tf.squeeze(tf.random.categorical(act_logits, 1), axis=-1)
-                action = np.squeeze(action, axis=-1)
-                val = np.squeeze(val_logits, axis=-1)
-                obs, reward, done, _ = env.step(action)
+                action = np.squeeze(action, axis=-1).item()
+                val = np.squeeze(val_logits, axis=-1).item()
+                # Change
+                obs, reward, terminated, truncated, _ = env.step(action)
+                done = terminated or truncated
                 obs = obs.reshape((1,-1))
                 if done:
                     reward-=10
@@ -90,15 +94,16 @@ class Agent:
         sample = np.reshape(sample, (1,-1))
         self.model(sample)
         self.model.load_weights('saved/acrobot/a2c_weights.h5')
-        obs, done, ep_reward = env.reset(), False, 0
+        obs, done, ep_reward = env.reset()[0], False, 0
         while not done:
             action, _ = self.model.predict(obs[None, :])
             action = tf.squeeze(tf.random.categorical(action, 1), axis=-1)
             action = np.squeeze(action, axis=-1)
-            obs, reward, done, _ = env.step(action)
+            obs, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
             ep_reward += reward
             env.render()
-        return ep_reward
+        return 
 
     
     def _discount_rewards(self, rewards, values):
@@ -119,11 +124,11 @@ class Agent:
 
     @tf.function
     def _critic_loss(self, returns, values):
-        return self.val_weight*losses.mean_squared_error(returns,values)
+        mse = MeanSquaredError()
+        return self.val_weight*mse(returns,values)
 
 
 model = Model(env.action_space.n)
 agent = Agent(model)
 agent.train(env)
 model.save_weights('saved/acrobot/a2c_weights.h5')
-agent.test(env)
