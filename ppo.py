@@ -33,7 +33,7 @@ class Model(tf.keras.Model):
 class Agent:
     def __init__(self, model):
         self.model = model
-        self.num_rollouts = 500 
+        self.num_rollouts = 50000 
         self.val_weight = 0.5
         self.model_entropy = 1e-3
         self.learning_rate = 1e-4
