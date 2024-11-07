@@ -111,7 +111,7 @@ class Agent:
         sample = np.random.rand(env.observation_space.shape[0])
         sample = np.reshape(sample, (1, -1))
         self.model(sample)
-        self.model.load_weights('saved/acrobot/ppo.weights.h5')
+        self.model.load_weights('saved/acrobot/ppo_2.weights.h5')
         obs, done, ep_reward = env.reset()[0], False, 0
         while not done:
             act_logits, _ = self.model(obs[None, :])
