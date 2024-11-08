@@ -8,6 +8,7 @@ import gymnasium as gym
 
 from tensorflow.keras.losses import MeanSquaredError
 
+tf.get_logger().setLevel('ERROR')
 
 class A2CModel(tf.keras.Model):
     def __init__(self, action_space):
@@ -56,7 +57,7 @@ class A2CAgent:
             while not done:
                 observation = obs.copy()
                 observations.append(observation)
-                act_logits, val_logits = self.model.predict(obs)
+                act_logits, val_logits = self.model.predict(obs, verbose=0)
                 action = tf.squeeze(tf.random.categorical(act_logits, 1), axis=-1)
                 action = np.squeeze(action, axis=-1).item()
                 val = np.squeeze(val_logits, axis=-1).item()
@@ -82,8 +83,8 @@ class A2CAgent:
                         returns = tf.convert_to_tensor(returns, dtype=tf.float32)
                         vals = tf.convert_to_tensor(vals, dtype=tf.float32)
                         val_loss = self._critic_loss(returns,vals)
-                    gradients = tape.gradient([logits_loss,val_loss],model.trainable_variables)
-                    self.optimizer.apply_gradients(zip(gradients,model.trainable_variables))
+                    gradients = tape.gradient([logits_loss,val_loss],self.model.trainable_variables)
+                    self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
 
             print(f"Episode  {rollout}:  Score  {np.mean(rollout_scores[-100:])}")
 
@@ -94,7 +95,7 @@ class A2CAgent:
         self.model.load_weights('saved/acrobot/a2c_weights.h5')
         obs, done, ep_reward = env.reset()[0], False, 0
         while not done:
-            action, _ = self.model.predict(obs[None, :])
+            action, _ = self.model.predict(obs[None, :], verbose=0)
             action = tf.squeeze(tf.random.categorical(action, 1), axis=-1)
             action = np.squeeze(action, axis=-1)
             obs, reward, terminated, truncated, _ = env.step(action)
