@@ -1,3 +1,4 @@
+
 import tensorflow as tf
 import tensorflow.keras.layers as layers
 import tensorflow.keras.losses as losses
@@ -7,11 +8,8 @@ import gymnasium as gym
 
 from tensorflow.keras.losses import MeanSquaredError
 
-env = gym.make('Acrobot-v1')
-action_space = env.action_space.n
 
-
-class Model(tf.keras.Model):
+class A2CModel(tf.keras.Model):
     def __init__(self, action_space):
         super().__init__()
         self.actor_h1 = layers.Dense(128, activation='relu',name='act1')
@@ -36,7 +34,7 @@ class Model(tf.keras.Model):
         return x_act, x_val
 
 
-class Agent:
+class A2CAgent:
 
     def __init__(self, model):
         self.model = model
@@ -126,9 +124,3 @@ class Agent:
     def _critic_loss(self, returns, values):
         mse = MeanSquaredError()
         return self.val_weight*mse(returns,values)
-
-
-model = Model(env.action_space.n)
-agent = Agent(model)
-agent.train(env)
-model.save_weights('saved/acrobot/a2c_weights.h5')
